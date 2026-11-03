@@ -130,6 +130,13 @@ def test_upload_requires_pdf_extension_and_pdf_signature(client):
     )
     assert invalid_pdf.status_code == 415
 
+    invalid_mime = test_client.post(
+        "/api/documents/upload",
+        headers=headers,
+        files={"file": ("notes.pdf", b"%PDF-1.7", "text/plain")},
+    )
+    assert invalid_mime.status_code == 415
+
 
 def test_health_and_documented_routes(client):
     test_client, _ = client

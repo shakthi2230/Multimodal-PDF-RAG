@@ -56,6 +56,11 @@ async def upload_document(
     safe_filename = re.sub(r"[^A-Za-z0-9._ -]", "_", original_name).strip(" .") or "document.pdf"
     if Path(safe_filename).suffix.lower() != ".pdf":
         raise HTTPException(status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE, detail="Only PDF files are accepted.")
+    if file.content_type not in {"application/pdf", "application/x-pdf"}:
+        raise HTTPException(
+            status_code=status.HTTP_415_UNSUPPORTED_MEDIA_TYPE,
+            detail="The uploaded file must have a PDF media type.",
+        )
 
     content = await file.read(settings.max_upload_bytes + 1)
     await file.close()
