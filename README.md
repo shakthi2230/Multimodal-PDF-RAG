@@ -18,11 +18,13 @@ See [`docs/architecture.md`](./docs/architecture.md) and [`docs/API.md`](./docs/
 ## Configuration
 
 1. Copy `.env.example` to `.env`.
-2. Set `JWT_SECRET_KEY` to a cryptographically random secret.
+2. Set `JWT_SECRET` to a cryptographically random secret.
 3. Set `OPENAI_API_KEY` to enable embeddings, grounded answers, and vision descriptions.
 4. Review the upload size, allowed browser origins, database URL, and Qdrant settings before deployment.
 
 Do not expose `.env` or API keys to the browser. The Docker Compose defaults are for local assessment/development, not production credentials.
+
+For the complete Windows clone, installation, run, test, and GitHub push steps, see [`SETUP.txt`](./SETUP.txt).
 
 ## Run with Docker Compose
 

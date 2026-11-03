@@ -1,0 +1,243 @@
+MULTIMODAL PDF RAG - SETUP AND GITHUB WORKFLOW
+================================================
+
+This guide covers cloning the project, installing it, running it, testing it,
+and pushing your changes to GitHub. Commands below are for Windows PowerShell.
+
+1. REQUIREMENTS
+---------------
+
+Install these tools before starting:
+
+- Git for Windows
+- Docker Desktop with Docker Compose v2 enabled (recommended)
+- Node.js 20 or newer and npm (only needed to run the frontend outside Docker)
+- Python 3.11 or newer (only needed to run the backend outside Docker)
+
+The application needs an OpenAI API key for PDF embeddings, figure analysis,
+and AI answers. The AI-backed workflow will not work until a valid key is
+configured. Never commit your API key or the .env file.
+
+2. CLONE THE REPOSITORY
+-----------------------
+
+Open PowerShell and run:
+
+    git clone https://github.com/shakthi2230/Multimodal-PDF-RAG.git
+    cd Multimodal-PDF-RAG
+
+If you already cloned the repository, update your local main branch:
+
+    git switch main
+    git pull origin main
+
+3. CONFIGURE ENVIRONMENT VARIABLES
+----------------------------------
+
+Create your private local environment file:
+
+    Copy-Item .env.example .env
+    notepad .env
+
+In .env, replace the JWT_SECRET value with a long, random, private value.
+Set OPENAI_API_KEY to your OpenAI API key. Keep all other values as they are
+for a standard local Docker Compose run.
+
+The Docker Compose configuration starts PostgreSQL, Qdrant, the API, and the
+frontend. The .env file is ignored by Git and must not be committed.
+
+4. RECOMMENDED: INSTALL AND RUN WITH DOCKER
+-------------------------------------------
+
+Make sure Docker Desktop is running. Confirm Compose is available:
+
+    docker --version
+    docker compose version
+
+Build and start all application services:
+
+    docker compose up --build -d
+
+Check service status:
+
+    docker compose ps
+
+View service logs if something does not start:
+
+    docker compose logs --tail=100 backend
+    docker compose logs --tail=100 frontend
+    docker compose logs --tail=100 db
+    docker compose logs --tail=100 qdrant
+
+Open the application:
+
+    Frontend:       http://localhost:5173
+    Backend health: http://localhost:8000/api/health
+    API docs:       http://localhost:8000/docs
+
+Register an account in the web application, upload a PDF, wait for processing
+to finish, and ask a question in a conversation.
+
+Stop the containers but keep saved database, vector, and upload data:
+
+    docker compose down
+
+Start them again later:
+
+    docker compose up -d
+
+To delete all saved application data as well as stop the containers, run:
+
+    docker compose down --volumes
+
+WARNING: The command above permanently deletes the Compose database, vector,
+and uploaded-PDF volumes. Do not use it if you want to keep your data.
+
+5. LOCAL DEVELOPMENT WITHOUT A CONTAINERIZED BACKEND
+----------------------------------------------------
+
+This option runs the API and frontend on Windows and uses Docker only for
+Qdrant. It requires Python, Node.js, npm, and Docker.
+
+5.1 Start Qdrant
+
+    docker run --name rag-qdrant -p 6333:6333 -v rag_qdrant_data:/qdrant/storage qdrant/qdrant:v1.12.5
+
+Leave that terminal running. If the container already exists, use this instead:
+
+    docker start rag-qdrant
+
+5.2 Install backend dependencies
+
+Open a second PowerShell terminal in the project root and run:
+
+    python -m venv .venv
+    .\.venv\Scripts\Activate.ps1
+    python -m pip install --upgrade pip
+    python -m pip install -r backend\requirements.txt
+
+If PowerShell blocks virtual environment activation, either allow local scripts
+for your user using the official Windows PowerShell execution-policy guidance,
+or run the interpreter directly as .\.venv\Scripts\python.exe for each command.
+
+5.3 Configure and start the backend
+
+In that same backend terminal, run:
+
+    Set-Location backend
+    $env:DATABASE_URL = "sqlite:///./data/rag.db"
+    $env:UPLOAD_DIR = ".\data\uploads"
+    $env:QDRANT_URL = "http://localhost:6333"
+    $env:JWT_SECRET = "replace-this-with-a-long-private-random-value"
+    $env:OPENAI_API_KEY = "your-openai-api-key"
+    $env:CORS_ORIGINS = "http://localhost:5173"
+    ..\.venv\Scripts\python.exe -m alembic upgrade head
+    ..\.venv\Scripts\python.exe -m uvicorn app.main:app --reload
+
+Keep the backend terminal running. Do not share or commit your API key or real
+JWT secret. Local environment variables set in this terminal apply only to
+that terminal session.
+
+5.4 Install and start the frontend
+
+Open a third PowerShell terminal in the project root and run:
+
+    Set-Location frontend
+    npm ci
+    $env:VITE_API_BASE_URL = "http://localhost:8000"
+    npm run dev
+
+Open http://localhost:5173 in your browser.
+
+6. RUN TESTS
+------------
+
+Backend tests, from the project root:
+
+    Set-Location backend
+    ..\.venv\Scripts\python.exe -m pytest tests -q
+
+Frontend production build and TypeScript check:
+
+    Set-Location ..\frontend
+    npm ci
+    npm run build
+
+AI-backed processing needs working external OpenAI and Qdrant services.
+Automated tests isolate external calls and do not establish answer accuracy
+on PDFs that have not been evaluated.
+
+7. PUSH YOUR CHANGES TO GITHUB
+------------------------------
+
+First check which files changed and make sure no credentials, .env files,
+uploaded PDFs, database files, or other private data are included:
+
+    git status
+    git diff --check
+    git diff
+
+The .env file is ignored by Git. Never force-add it. Stage only the files you
+intend to publish. For example:
+
+    git add README.md SETUP.txt backend frontend docs docker-compose.yml
+    git status
+
+Review the staged file list and staged changes before committing:
+
+    git diff --cached --stat
+    git diff --cached
+
+Commit and push to the main branch:
+
+    git commit -m "Describe your project changes"
+    git push origin main
+
+GitHub may ask you to authenticate. Use Git Credential Manager or the
+authentication method configured for your GitHub account; do not put a
+password or token into the repository or a command saved in shell history.
+
+Verify the push:
+
+    git status --short --branch
+    git log -1 --oneline --decorate
+
+If you do not have permission to push to the original repository, fork it on
+GitHub, set your fork as the push remote, and push your branch to your fork.
+For example:
+
+    git remote -v
+    git remote add my-fork https://github.com/YOUR-USERNAME/Multimodal-PDF-RAG.git
+    git push -u my-fork main
+
+8. TROUBLESHOOTING
+------------------
+
+- "docker compose" is not recognized:
+  Install or update Docker Desktop and make sure its Compose v2 plugin is
+  enabled. The Docker CLI alone is not sufficient.
+
+- API container exits or reports a missing database driver:
+  Confirm .env exists and Docker services have started. Rebuild after pulling
+  the latest repository changes with docker compose up --build -d.
+
+- Document processing or chat reports an OpenAI error:
+  Check OPENAI_API_KEY in .env, confirm the key is active, then restart the
+  backend using docker compose up -d --force-recreate backend.
+
+- A scanned PDF fails processing:
+  OCR packages are optional and are not installed in the standard setup.
+  Install PaddleOCR and its compatible PaddlePaddle runtime in a supported
+  environment before processing scanned pages.
+
+- Frontend cannot contact the API:
+  Check the backend health URL, frontend API base URL, CORS_ORIGINS, and
+  backend logs. For Docker Compose, the browser-facing API URL is
+  http://localhost:8000, not the internal service name.
+
+- A new Git push is rejected:
+  Run git pull --rebase origin main, resolve any conflicts, run tests again,
+  then push. Do not use a force push unless you understand and intend to
+  replace remote history.
+
+END OF SETUP GUIDE
