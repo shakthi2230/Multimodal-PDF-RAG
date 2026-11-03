@@ -1,0 +1,32 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "multimodal-pdf-rag-backend"
+version = "0.1.0"
+description = "FastAPI backend for owner-isolated multimodal PDF retrieval and Q&A."
+requires-python = ">=3.10"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "uvicorn[standard]>=0.30,<1",
+  "SQLAlchemy>=2.0,<3",
+  "pydantic>=2.8,<3",
+  "email-validator>=2.1",
+  "python-multipart>=0.0.9",
+  "PyMuPDF>=1.24",
+  "pdfplumber>=0.11",
+  "openai>=1.40",
+  "qdrant-client>=1.10",
+]
+
+[project.optional-dependencies]
+ocr = ["paddleocr>=2.7", "paddlepaddle>=2.6"]
+dev = ["alembic>=1.13", "httpx>=0.27", "pytest>=8"]
+
+[tool.setuptools]
+packages = ["app", "app.routers", "app.services"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
